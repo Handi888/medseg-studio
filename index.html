@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html class="" lang="zh-CN">
+<head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1" name="viewport"/><title>三小只的影像手帐 · MedSeg Studio</title><link href="journal.css" rel="stylesheet"/><script src="chart.umd.js"></script><link href="assets/sticker-whale.webp" rel="icon" type="image/webp"/></head>
+<body class="" id="top">
+<!-- Toast Notification -->
+<div class="fixed bottom-5 right-5 z-50 hidden max-w-sm items-center gap-2.5 rounded-2xl border border-sky-400/40 bg-slate-900/95 px-4 py-3 text-sm text-slate-100 shadow-2xl backdrop-blur-xl transition-all" id="toastBanner" role="status">
+<i aria-hidden="true" class="pal-sticker" data-kind="chi"></i>
+<span id="toastText">操作已完成</span>
+</div>
+<!-- Structured Report Modal -->
+<div aria-label="定量报告" aria-modal="true" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-950/85 p-4 backdrop-blur-md" id="reportModal" role="dialog">
+<div class="studio-card w-full max-w-xl rounded-2xl p-5">
+<div class="flex items-center justify-between border-b border-slate-800/90 pb-3.5">
+<div class="flex items-center gap-2.5">
+<i aria-hidden="true" class="pal-sticker" data-kind="fish"></i>
+<div>
+<h3 class="font-serif-editorial text-base font-semibold text-white">结构化医学影像分割与病灶定量报告</h3>
+<p class="text-[11px] text-slate-400">Quantitative Morphometry &amp; Spatial Overlap Summary</p>
+</div>
+</div>
+<button aria-label="关闭报告窗口" class="btn-luxe-titanium rounded-lg p-1.5 text-slate-300" id="closeReportModalBtn" type="button">
+<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><line x1="18" x2="6" y1="6" y2="18"></line><line x1="6" x2="18" y1="6" y2="18"></line></svg>
+</button>
+</div>
+<div class="pal-bubble"><i aria-hidden="true" class="pal-sticker" data-kind="whale"></i><div><b>大肥鱼的报告夹</b><p>这里记下了当前轮廓的测量值，可以复制整页报告。</p></div></div><pre class="studio-subcard mt-3.5 max-h-80 overflow-y-auto whitespace-pre-wrap rounded-xl p-4 font-mono text-xs leading-relaxed text-slate-200" id="reportContentPre"></pre>
+<p class="mt-2.5 text-[11px] text-amber-300/85">审阅说明：本定量结果服务于医学图像算法教学、分割原型验证与科研演示，不构成临床诊断医嘱。</p>
+<div class="mt-4 flex flex-wrap justify-end gap-2.5">
+<button class="btn-luxe-primary inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold" id="copyReportBtn" type="button">
+<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewbox="0 0 24 24"><rect height="13" rx="2" width="13" x="9" y="9"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          复制报告文本
+        </button>
+<button class="btn-luxe-titanium rounded-xl px-4 py-2 text-xs font-medium" id="dismissReportBtn" type="button">关闭</button>
+</div>
+</div>
+</div>
+<!-- Top Floating Glass Navigation Header -->
+<header class="navbar"><div class="nav-inner"><a class="wordmark" href="#top"><i aria-hidden="true">✿</i>MedSeg Studio</a>
+<nav aria-label="主导航"><a href="#samples">样本夹</a><a href="#workstationSection">分割工作台</a><a href="#editorialArticleSection">方法笔记</a></nav>
+<div class="nav-end"><button aria-pressed="true" id="motion" type="button">✧ <span>动效开</span></button><button class="report-button" id="openReportBtn" type="button">▤　查看报告</button></div></div></header>
+<!-- Bespoke Generated Editorial Hero Banner -->
+<!-- Main 3-Column Workstation Grid -->
+<section aria-labelledby="coverTitle" class="cover shell"><div class="cover-copy"><div class="cover-line"><span class="binding"></span> 医学影像分割工作台</div><h1 id="coverTitle">三小只的<span>影像手帐</span><i aria-hidden="true">♡</i></h1>
+<p>选一张影像，和三小只一起描出病灶轮廓，<br class="desktop-break"/>把面积、长径和重叠度记进手帐。</p>
+<div class="cover-actions"><label class="action rose" for="uploadImageInput"><span aria-hidden="true">＋</span> 导入影像<input accept="image/*" class="pick-file" id="uploadImageInput" type="file"/></label>
+<button class="action ghost" id="heroJumpAutoBtn" type="button">试试 CT 筛查 <span aria-hidden="true">↗</span></button></div></div>
+<figure class="postcard"><span aria-hidden="true" class="tape"></span><div class="scene">
+<img alt="春日野餐。Chiikawa 举着小花，黄色奶娃扶着肚子，蓝发鲸鱼娘捧着手帐。" src="assets/postcard.webp"/>
+<button aria-label="和 Chiikawa 打招呼" data-pal="chi" title="戳戳 Chiikawa"></button><button aria-label="和奶娃打招呼" data-pal="nai" title="戳戳奶娃"></button><button aria-label="和蓝色大肥鱼打招呼" data-pal="fish" title="戳戳蓝色大肥鱼"></button><span aria-hidden="true" id="spark"></span></div>
+<figcaption><div class="card-voice"><i aria-hidden="true" class="pal-sticker" data-kind="chi"></i><span aria-live="polite" id="palNote">♡　点点插画里的伙伴，听听它们说什么。</span></div><i aria-hidden="true">✧</i></figcaption></figure></section><section class="shelf shell" id="samples"><div class="sectitle"><span aria-hidden="true">✿</span><h2>教学样本夹</h2><i></i></div><div class="case-list"><button class="case-tab" data-case="mri" id="caseBtnMri" type="button"><img alt="" src="assets/sample-mri.webp"/><span class="sample-name"><strong>脑部增强 MRI</strong><small>T1c 轴位 · 0.45 mm/px</small></span><span aria-hidden="true" class="state-mark"></span><i aria-hidden="true" class="pal-sticker sample-sticker" data-kind="chi"></i></button><button class="case-tab" data-case="ct" id="caseBtnCt" type="button"><img alt="" src="assets/sample-ct.webp"/><span class="sample-name"><strong>胸部 CT 肺结节</strong><small>肺窗 · 0.68 mm/px</small></span><span aria-hidden="true" class="state-mark"></span><i aria-hidden="true" class="pal-sticker sample-sticker" data-kind="nai"></i></button><button class="case-tab" data-case="derm" id="caseBtnDerm" type="button"><img alt="" src="assets/sample-derm.webp"/><span class="sample-name"><strong>皮肤镜色素性病灶</strong><small>偏振光 · 0.05 mm/px</small></span><span aria-hidden="true" class="state-mark"></span><i aria-hidden="true" class="pal-sticker sample-sticker" data-kind="fish"></i></button></div></section><main class="desk shell" id="workstationSection">
+<!-- LEFT COLUMN: Segmentation Algorithms & Windowing Controls -->
+<section class="tools-col"><div class="file-tab butter"><i aria-hidden="true" class="pal-sticker" data-kind="nai"></i>奶娃的分割工具</div>
+<!-- Mode Selector Card -->
+<div class="studio-card rounded-2xl p-4">
+<div class="mb-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="h-3.5 w-1 rounded-full bg-sky-400"></span>
+<h2 class="text-xs font-semibold tracking-wider text-slate-200">分割方式</h2>
+</div>
+<span class="rounded-full border border-sky-400/30 bg-sky-500/15 px-2.5 py-0.5 text-[10px] font-medium text-sky-300" id="activeModeBadge">种子区域生长</span>
+</div><div class="pal-bubble"><i aria-hidden="true" class="pal-sticker" data-kind="nai"></i><div><b>奶娃的小铅笔</b><p id="toolTip">容差越大，更多相近灰度的邻居会被纳入轮廓。</p></div></div>
+<div class="grid grid-cols-2 gap-2">
+<button class="algo-mode-btn flex flex-col items-start rounded-xl border p-2.5 text-left transition" data-mode="region" id="modeRegionBtn" type="button">
+<div class="flex w-full items-center justify-between">
+<span class="text-xs font-semibold">种子区域生长</span>
+<svg class="h-3.5 w-3.5 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v4m0 12v4M2 12h4m12 0h4"></path></svg>
+</div>
+<span class="mt-1 text-[10px] opacity-75">点击病灶自动生长</span>
+</button>
+<button class="algo-mode-btn flex flex-col items-start rounded-xl border p-2.5 text-left transition" data-mode="auto" id="modeAutoBtn" type="button">
+<div class="flex w-full items-center justify-between">
+<span class="text-xs font-semibold">CAD 自动病灶识别</span>
+<svg class="h-3.5 w-3.5 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><rect height="18" rx="3" width="18" x="3" y="3"></rect><circle cx="12" cy="12" r="3.5"></circle></svg>
+</div>
+<span class="mt-1 text-[10px] opacity-75">连通域筛查与定位</span>
+</button>
+<button class="algo-mode-btn flex flex-col items-start rounded-xl border p-2.5 text-left transition" data-mode="otsu" id="modeOtsuBtn" type="button">
+<div class="flex w-full items-center justify-between">
+<span class="text-xs font-semibold">Otsu 阈值分割</span>
+<svg class="h-3.5 w-3.5 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M4 20h16M6 16v-5m4 5V8m4 8v-3m4 3V6"></path></svg>
+</div>
+<span class="mt-1 text-[10px] opacity-75">类间方差最优阈值</span>
+</button>
+<button class="algo-mode-btn flex flex-col items-start rounded-xl border p-2.5 text-left transition" data-mode="brush" id="modeBrushBtn" type="button">
+<div class="flex w-full items-center justify-between">
+<span class="text-xs font-semibold">画笔精修轮廓</span>
+<svg class="h-3.5 w-3.5 opacity-80" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg>
+</div>
+<span class="mt-1 text-[10px] opacity-75">手动增补与擦除</span>
+</button>
+</div>
+<!-- Target Lesion Polarity & Spacing -->
+<div class="mt-3.5 grid grid-cols-2 gap-2.5 border-t border-slate-800/80 pt-3.5">
+<div>
+<label class="block text-[11px] font-medium text-slate-400" for="polaritySelect">目标病灶信号极性</label>
+<select class="studio-subcard mt-1 w-full rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:border-sky-400 focus:outline-none" id="polaritySelect">
+<option value="bright">高密度 / 高信号 (亮)</option>
+<option value="dark">低密度 / 色素沉着 (暗)</option>
+</select>
+</div>
+<div>
+<label class="block text-[11px] font-medium text-slate-400" for="spacingInput">空间标定 (mm/px)</label>
+<input class="studio-subcard mt-1 w-full rounded-xl px-2.5 py-1.5 font-mono text-xs text-slate-200 focus:border-sky-400 focus:outline-none" id="spacingInput" max="5.0" min="0.01" step="0.01" type="number" value="0.45"/>
+</div>
+</div>
+<!-- Panel A: Region Growing -->
+<div class="studio-subcard mt-3.5 space-y-2.5 rounded-xl p-3" id="paramsRegion">
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-300">同质生长容差 (±ΔI)</span>
+<span class="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-xs font-semibold text-sky-300" id="tolValueLabel">38</span>
+</div>
+<input class="w-full" id="regionTolSlider" max="95" min="5" type="range" value="38"/>
+<div class="flex items-center justify-between pt-0.5 text-[11px] text-slate-400">
+<span>当前种子点：<strong class="font-mono text-slate-200" id="seedCoordLabel">(356, 346)</strong></span>
+<button class="btn-luxe-soft rounded-lg px-2.5 py-1 text-[11px] font-medium" id="reRunRegionBtn" type="button">重新生长</button>
+</div>
+<p class="text-[11px] leading-relaxed text-slate-400">轻点影像里的目标，沿相近灰度生成轮廓。调整容差可以改变生长范围。</p>
+</div>
+<!-- Panel B: Auto CAD Lesion Detection -->
+<div class="studio-subcard mt-3.5 hidden space-y-2.5 rounded-xl p-3" id="paramsAuto">
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-300">检测灵敏度偏移</span>
+<span class="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-xs font-semibold text-sky-300" id="autoSensLabel">0</span>
+</div>
+<input class="w-full" id="autoSensSlider" max="35" min="-35" type="range" value="0"/>
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-300">最小病灶面积过滤 (px)</span>
+<span class="font-mono font-semibold text-sky-300" id="minAreaLabel">80</span>
+</div>
+<input class="w-full" id="minAreaSlider" max="600" min="30" step="10" type="range" value="80"/>
+<button class="btn-luxe-soft w-full rounded-xl py-2 text-xs font-semibold" id="runAutoDetectBtn" type="button">执行全图病灶自动筛查</button>
+</div>
+<!-- Panel C: Otsu Thresholding -->
+<div class="studio-subcard mt-3.5 hidden space-y-2.5 rounded-xl p-3" id="paramsOtsu">
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-300">分割灰度阈值 (T)</span>
+<span class="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-xs font-semibold text-sky-300" id="otsuThrLabel">172</span>
+</div>
+<input class="w-full" id="otsuThrSlider" max="245" min="10" type="range" value="172"/>
+<div class="flex items-center justify-between gap-2 pt-0.5">
+<label class="inline-flex cursor-pointer items-center gap-1.5 text-xs text-slate-300">
+<input checked="" class="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 text-sky-500" id="keepLargestCheck" type="checkbox"/>
+<span>仅保留最大连通病灶 (去伪影)</span>
+</label>
+</div>
+<button class="btn-luxe-soft w-full rounded-xl py-2 text-xs font-semibold" id="calcOtsuBtn" type="button">自动计算最优 Otsu 阈值</button>
+</div>
+<!-- Panel D: Manual Brush & Eraser -->
+<div class="studio-subcard mt-3.5 hidden space-y-2.5 rounded-xl p-3" id="paramsBrush">
+<div class="grid grid-cols-2 gap-2">
+<button class="rounded-xl border border-sky-400 bg-sky-500/20 py-1.5 text-xs font-semibold text-sky-200 shadow-sm" id="brushAddBtn" type="button">+ 画笔增补</button>
+<button class="btn-luxe-titanium rounded-xl py-1.5 text-xs font-medium" id="brushEraseBtn" type="button">- 橡皮擦除</button>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="text-slate-300">画笔半径 (px)</span>
+<span class="font-mono font-semibold text-sky-300" id="brushRadiusLabel">10 px</span>
+</div>
+<input class="w-full" id="brushRadiusSlider" max="32" min="2" type="range" value="10"/>
+<div class="grid grid-cols-2 gap-2 pt-1">
+<button class="btn-luxe-titanium rounded-xl py-1.5 text-xs" id="undoMaskBtn" type="button">撤销上一步</button>
+<button class="rounded-xl border border-rose-500/35 bg-rose-500/12 py-1.5 text-xs font-medium text-rose-300 transition hover:bg-rose-500/22" id="clearMaskBtn" type="button">清空掩膜</button>
+</div>
+</div>
+<!-- Morphological Post-Processing -->
+<div class="mt-3.5 flex items-center justify-between gap-2 border-t border-slate-800/80 pt-3.5">
+<span class="text-[11px] font-medium text-slate-400">形态学精修：</span>
+<div class="flex gap-1.5">
+<button class="btn-luxe-titanium rounded-lg px-2.5 py-1 text-[11px] font-medium" id="morphSmoothBtn" type="button">闭运算平滑</button>
+<button class="btn-luxe-titanium rounded-lg px-2.5 py-1 text-[11px] font-medium" id="morphFillHolesBtn" type="button">孔洞填充</button>
+</div>
+</div>
+</div>
+<!-- Window / Level Radiology Controls -->
+<div class="studio-card rounded-2xl p-4">
+<div class="mb-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="h-3.5 w-1 rounded-full bg-amber-400"></span>
+<h2 class="text-xs font-semibold tracking-wider text-slate-200">窗宽与窗位</h2>
+</div>
+<button class="btn-luxe-soft rounded-md px-2 py-0.5 text-[11px]" id="resetWindowBtn" type="button">重置默认</button>
+</div>
+<div class="space-y-3">
+<div>
+<div class="flex justify-between text-xs">
+<span class="text-slate-400">窗宽 (Window Width 对比度跨度)</span>
+<span class="font-mono text-slate-200" id="wwLabel">255</span>
+</div>
+<input class="mt-1.5 w-full" id="wwSlider" max="255" min="30" type="range" value="255"/>
+</div>
+<div>
+<div class="flex justify-between text-xs">
+<span class="text-slate-400">窗位 (Window Level 灰阶中心)</span>
+<span class="font-mono text-slate-200" id="wlLabel">128</span>
+</div>
+<input class="mt-1.5 w-full" id="wlSlider" max="240" min="15" type="range" value="128"/>
+</div>
+<div class="grid grid-cols-2 gap-1.5 pt-1 sm:grid-cols-4 lg:grid-cols-2">
+<button class="btn-luxe-titanium rounded-lg px-2.5 py-1.5 text-[11px] font-medium" id="presetDefaultWinBtn" type="button">标准窗</button>
+<button class="btn-luxe-titanium rounded-lg px-2.5 py-1.5 text-[11px] font-medium" id="presetHighContrastBtn" type="button">高对比病灶窗</button>
+<button class="btn-luxe-titanium rounded-lg px-2.5 py-1.5 text-[11px] font-medium" id="presetSoftWinBtn" type="button">柔和细节窗</button>
+<button class="btn-luxe-titanium rounded-lg px-2.5 py-1.5 text-[11px] font-medium" id="invertImageBtn" type="button">负片反相</button>
+</div>
+</div>
+</div>
+<!-- Layer & Visualization Controls -->
+<div class="studio-card rounded-2xl p-4">
+<div class="mb-3 flex items-center gap-2">
+<span class="h-3.5 w-1 rounded-full bg-emerald-400"></span>
+<h2 class="text-xs font-semibold tracking-wider text-slate-200">视觉图层与卷帘检视</h2>
+</div>
+<div class="space-y-2.5">
+<div>
+<div class="flex justify-between text-xs">
+<span class="text-slate-400">分割掩膜渲染不透明度</span>
+<span class="font-mono text-slate-200" id="opacityLabel">45%</span>
+</div>
+<input class="mt-1.5 w-full" id="maskOpacitySlider" max="90" min="0" type="range" value="45"/>
+</div>
+<div class="grid grid-cols-2 gap-2 pt-1.5 text-xs">
+<label class="inline-flex cursor-pointer items-center gap-1.5 text-slate-300">
+<input checked="" class="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 text-sky-500" id="showContourCheck" type="checkbox"/>
+<span>病灶边缘轮廓</span>
+</label>
+<label class="inline-flex cursor-pointer items-center gap-1.5 text-slate-300">
+<input checked="" class="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 text-sky-500" id="showCaliperCheck" type="checkbox"/>
+<span>RECIST 最大长径</span>
+</label>
+<label class="inline-flex cursor-pointer items-center gap-1.5 text-slate-300">
+<input checked="" class="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 text-emerald-500" id="showGtCheck" type="checkbox"/>
+<span class="text-emerald-300">金标准参考轮廓</span>
+</label>
+<label class="inline-flex cursor-pointer items-center gap-1.5 text-slate-300">
+<input class="h-3.5 w-3.5 rounded border-slate-600 bg-slate-900 text-sky-500" id="splitWipeCheck" type="checkbox"/>
+<span>左右卷帘对比</span>
+</label>
+</div>
+<div class="studio-subcard hidden rounded-xl p-2.5" id="splitWipeBox">
+<div class="flex justify-between text-[11px] text-slate-400">
+<span>原始灰阶切面</span>
+<span class="font-mono text-sky-400" id="splitPosLabel">50%</span>
+<span>分割量化图层</span>
+</div>
+<input class="mt-1.5 w-full" id="splitWipeSlider" max="95" min="5" type="range" value="50"/>
+</div>
+</div>
+</div>
+</section>
+<!-- CENTER COLUMN: Interactive Medical Image Viewport -->
+<section class="image-col"><div class="file-tab peach"><i aria-hidden="true" class="pal-sticker" data-kind="chi"></i>Chiikawa 的观察窗</div>
+<div class="studio-card flex flex-1 flex-col rounded-2xl p-4">
+<!-- Viewport Top Metadata Bar -->
+<div class="mb-3 flex flex-wrap items-start justify-between gap-2 border-b border-slate-800/80 pb-3">
+<div>
+<div class="flex flex-wrap items-center gap-2">
+<h2 class="font-serif-editorial text-base font-semibold text-white" id="caseTitleHeading">脑部 T1c 增强 MRI（轴位）</h2>
+<span class="rounded-md border border-sky-400/25 bg-sky-500/10 px-2 py-0.5 font-mono text-[10px] text-sky-300" id="caseModalityTag">MRI · 512×512</span>
+</div>
+<div class="pal-bubble"><i aria-hidden="true" class="pal-sticker" data-kind="chi"></i><p class="mt-1 text-xs leading-relaxed text-slate-400" id="caseClinicalDesc">右侧顶枕叶脑实质内见类圆形明显强化高信号靶病灶，边界锐利清晰。</p></div>
+</div>
+<div class="flex items-center gap-2">
+<button class="btn-luxe-titanium inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium" id="exportOverlayBtn" type="button">
+<svg class="h-3.5 w-3.5 text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>
+              下载叠加图
+            </button>
+<button class="btn-luxe-titanium inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-medium" id="exportMaskBtn" type="button">
+<svg class="h-3.5 w-3.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24"><rect height="18" rx="2" width="18" x="3" y="3"></rect><circle cx="12" cy="12" r="4"></circle></svg>
+              下载二值掩膜
+            </button>
+</div>
+</div>
+<!-- Precision Framed Canvas Container -->
+<div class="canvas-checker relative flex flex-1 items-center justify-center overflow-hidden rounded-2xl border border-slate-800/90 p-3">
+<div class="relative aspect-square w-full max-w-[512px]">
+<!-- Corner Precision Reticle Brackets -->
+<span class="pointer-events-none absolute -top-1 -left-1 h-3.5 w-3.5 border-t-2 border-l-2 border-sky-400/50"></span>
+<span class="pointer-events-none absolute -top-1 -right-1 h-3.5 w-3.5 border-t-2 border-r-2 border-sky-400/50"></span>
+<span class="pointer-events-none absolute -bottom-1 -left-1 h-3.5 w-3.5 border-b-2 border-l-2 border-sky-400/50"></span>
+<span class="pointer-events-none absolute -bottom-1 -right-1 h-3.5 w-3.5 border-b-2 border-r-2 border-sky-400/50"></span>
+<canvas class="h-full w-full cursor-crosshair rounded-xl ring-1 ring-slate-700/70 shadow-2xl touch-none" height="512" id="medCanvas" width="512"></canvas>
+<!-- Orientation Markers (Radiology Convention) -->
+<span class="pointer-events-none absolute top-2.5 left-1/2 -translate-x-1/2 rounded bg-slate-950/65 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-slate-300">A</span>
+<span class="pointer-events-none absolute bottom-2.5 left-1/2 -translate-x-1/2 rounded bg-slate-950/65 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-slate-300">P</span>
+<span class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 rounded bg-slate-950/65 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-slate-300">R</span>
+<span class="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded bg-slate-950/65 px-1.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-slate-300">L</span>
+</div>
+</div>
+<!-- Legend & Live Pixel Probe Bar -->
+<div class="studio-subcard mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 text-[11px]">
+<div class="flex flex-wrap items-center gap-3.5">
+<span class="inline-flex items-center gap-1.5 text-slate-300">
+<span class="h-2.5 w-2.5 rounded-sm bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.7)]"></span>当前分割掩膜
+            </span>
+<span class="inline-flex items-center gap-1.5 text-slate-300">
+<span class="h-0.5 w-3.5 border-b-2 border-dashed border-emerald-400"></span>专家参考轮廓
+            </span>
+<span class="inline-flex items-center gap-1.5 text-slate-300">
+<span class="h-0.5 w-3.5 bg-amber-400"></span>RECIST 最大长径
+            </span>
+</div>
+<div class="font-mono text-[11px] text-slate-300" id="probeReadout">
+            坐标: (--, --) | 灰度: -- | 状态: 待命
+          </div>
+</div>
+</div>
+</section>
+<!-- RIGHT COLUMN: Quantitative Morphometrics, Dice/IoU & Histogram -->
+<section class="stats-col"><div class="file-tab water"><i aria-hidden="true" class="pal-sticker" data-kind="fish"></i>大肥鱼的测量簿</div>
+<!-- Quantitative Morphometrics Card -->
+<div class="studio-card rounded-2xl p-4">
+<div class="mb-3 flex items-center justify-between">
+<h2 class="text-xs font-semibold tracking-wider text-slate-200">病灶形态学定量测量</h2>
+<span class="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300" id="lesionStatusPill">已检出目标病灶</span>
+</div>
+<div hidden="" id="restNote"><i aria-hidden="true" class="pal-sticker" data-kind="fish"></i><div><b>蓝色大肥鱼在等轮廓～</b><p>轻点影像设置种子，或用画笔补上第一个区域。</p></div></div><div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+<div class="studio-subcard rounded-xl p-2.5">
+<div class="text-[11px] text-slate-400">病灶面积 (Area)</div>
+<div class="mt-1 font-mono text-base font-bold text-white" id="metricAreaMm">-- mm²</div>
+<div class="font-mono text-[10px] text-slate-400" id="metricAreaPx">-- px</div>
+</div>
+<div class="studio-subcard rounded-xl p-2.5">
+<div class="text-[11px] text-slate-400">最大长径 (RECIST)</div>
+<div class="mt-1 font-mono text-base font-bold text-amber-300" id="metricMaxDiam">-- mm</div>
+<div class="font-mono text-[10px] text-slate-400" id="metricEqDiam">等效径 -- mm</div>
+</div>
+<div class="studio-subcard rounded-xl p-2.5">
+<div class="text-[11px] text-slate-400">边界周长</div>
+<div class="mt-1 font-mono text-base font-bold text-white" id="metricPerimeter">-- mm</div>
+<div class="font-mono text-[10px] text-sky-300" id="metricCircularity">圆度 --</div>
+</div>
+<div class="studio-subcard rounded-xl p-2.5">
+<div class="text-[11px] text-slate-400">病灶灰度均值</div>
+<div class="mt-1 font-mono text-sm font-bold text-white" id="metricMeanStd">-- ± --</div>
+<div class="font-mono text-[10px] text-slate-400">范围 0–255</div>
+</div>
+<div class="studio-subcard col-span-1 rounded-xl p-2.5 sm:col-span-2">
+<div class="text-[11px] text-slate-400">病灶质心与包围盒 (px)</div>
+<div class="mt-1 font-mono text-xs font-semibold text-slate-200" id="metricCentroidBbox">质心 (--, --) · BBox [--]</div>
+<div class="font-mono text-[10px] text-cyan-300" id="metricContrastRatio">病灶/周围对比度 ΔI: --</div>
+</div>
+</div>
+</div>
+<!-- Segmentation Overlap Evaluation (Dice & IoU) -->
+<div class="studio-card rounded-2xl p-4">
+<div class="mb-2.5 flex items-center justify-between">
+<h2 class="text-xs font-semibold tracking-wider text-slate-200">参考轮廓重叠度</h2>
+<button class="btn-luxe-titanium rounded-lg px-2.5 py-1 text-[10px] font-medium" id="setAsRefMaskBtn" title="将当前分割结果保存为自定义参考掩膜，便于对比不同算法" type="button">设为参考掩膜</button>
+</div>
+<div class="space-y-2.5" id="gtMetricsContainer">
+<div class="grid grid-cols-2 gap-2.5">
+<div class="studio-subcard rounded-xl p-3">
+<div class="flex items-center justify-between text-[11px]">
+<span class="text-slate-300">Dice 相似系数</span>
+<span class="font-mono text-[10px] text-slate-500">DSC / F1</span>
+</div>
+<div class="mt-1 font-mono text-lg font-bold text-emerald-400" id="metricDice">--</div>
+<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+<div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-300 transition-all duration-300" id="barDice" style="width: 0%"></div>
+</div>
+</div>
+<div class="studio-subcard rounded-xl p-3">
+<div class="flex items-center justify-between text-[11px]">
+<span class="text-slate-300">IoU 交并比</span>
+<span class="font-mono text-[10px] text-slate-500">Jaccard</span>
+</div>
+<div class="mt-1 font-mono text-lg font-bold text-sky-400" id="metricIou">--</div>
+<div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+<div class="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-300 transition-all duration-300" id="barIou" style="width: 0%"></div>
+</div>
+</div>
+</div>
+<div class="studio-subcard flex items-center justify-between rounded-xl px-3.5 py-2 text-xs">
+<span class="text-slate-400">敏感度 Recall: <strong class="font-mono text-slate-100" id="metricRecall">--</strong></span>
+<span class="text-slate-400">精确率 Precision: <strong class="font-mono text-slate-100" id="metricPrecision">--</strong></span>
+</div>
+</div>
+</div>
+<!-- Intensity Histogram Card -->
+<div class="studio-card rounded-2xl p-4">
+<div class="mb-2 flex items-center justify-between">
+<h2 class="text-xs font-semibold tracking-wider text-slate-200">组织与病灶的灰度分布</h2>
+<span class="font-mono text-[10px] text-slate-400">32 Grayscale Bins</span>
+</div>
+<div class="relative h-40 w-full">
+<canvas id="histChartCanvas"></canvas>
+</div>
+</div>
+<!-- Detected Candidate Lesions List -->
+<div class="studio-card rounded-2xl p-4">
+<div class="mb-2.5 flex items-center justify-between">
+<h2 class="text-xs font-semibold tracking-wider text-slate-200">CAD 候选病灶筛查序列</h2>
+<button class="btn-luxe-soft rounded-lg px-2.5 py-1 text-[11px] font-medium" id="quickScanCandidatesBtn" type="button">刷新全图识别</button>
+</div>
+<div class="studio-subcard max-h-40 overflow-y-auto rounded-xl">
+<table class="w-full text-left text-xs">
+<thead class="border-b border-slate-800/90 bg-slate-900/90 text-[10px] uppercase text-slate-400">
+<tr>
+<th class="px-2.5 py-2">编号</th>
+<th class="px-2 py-2">中心坐标</th>
+<th class="px-2 py-2">面积</th>
+<th class="px-2 py-2">长径</th>
+<th class="px-2 py-2">置信度</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-800/70 text-[11px]" id="candidatesTableBody">
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</main>
+<!-- EDITORIAL ARTICLE SECTION: 医学图像分割与病灶量化深度专栏 -->
+<article class="notes shell" id="editorialArticleSection">
+<div class="studio-card overflow-hidden rounded-3xl p-6 sm:p-10">
+<!-- Editorial Header & Generated 16:9 Three-Layer Isometric Illustration -->
+<div class="grid grid-cols-1 items-center gap-8 border-b border-slate-800/90 pb-8 lg:grid-cols-12">
+<div class="editorial-prose lg:col-span-7">
+<div class="inline-flex items-center gap-2 rounded-full border border-sky-400/25 bg-sky-500/10 px-3 py-1 text-[11px] font-medium tracking-wider text-sky-300">
+<span>影像分割 · 方法笔记</span>
+</div>
+<h2 class="font-serif-editorial mt-3.5 text-2xl font-bold leading-snug text-white sm:text-3xl">从灰阶到轮廓的三篇方法笔记</h2>
+<p class="mt-4 text-sm sm:text-[15px]">
+            在一幅 512×512 的放射学断层影像里，二十六万余个像素各自承载着组织对射线吸收或磁共振弛豫的物理回响。然而，原始灰阶本身并不会直接回答临床问题——唯有将离散像素精确聚合成具有解剖意义的<strong>分割掩膜（Segmentation Mask）</strong>，病灶的面积演化、边界规则度与最大长径才能转化为可追踪、可复现的定量指标。
+          </p>
+<blockquote class="mt-4 rounded-2xl border-l-2 border-amber-400/80 bg-slate-950/65 px-4 py-3 text-xs italic leading-relaxed text-slate-300 sm:text-sm">
+            “优秀的医学图像分割并非单纯追逐高对比度边缘，而是在局部噪声、部分容积效应与解剖先验之间，寻找最忠实于病理实体的空间边界。”
+          </blockquote>
+</div>
+<div class="lg:col-span-5">
+<figure class="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-950 shadow-2xl">
+<img alt="医学影像底层扫描、中层分割网格与顶层几何测量卡尺的三层解构插图" class="h-auto w-full object-cover" src="assets/illustration-b5287a7f07.jpg"/>
+<figcaption class="border-t border-slate-800/90 bg-slate-950/90 px-4 py-2.5 text-[11px] leading-relaxed text-slate-400">
+              图解：定量影像分析的三重解构——底层原始灰阶断层、中层连通拓扑分割网格，以及顶层面向疗效评估的几何长径标尺。
+            </figcaption>
+</figure>
+</div>
+</div>
+<!-- Three-Column Editorial Chapters with Interactive Demo Triggers -->
+<div class="editorial-prose mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+<!-- Chapter I -->
+<div class="studio-subcard flex flex-col justify-between rounded-2xl p-5 sm:p-6">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-mono text-xs font-semibold tracking-widest text-amber-300">CHAPTER 01</span>
+<span class="rounded-md border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 text-[10px] text-amber-200">视觉预处理</span>
+<i aria-hidden="true" class="pal-sticker chapter-pal" data-kind="chi"></i></div>
+<h3 class="font-serif-editorial mt-2.5 text-lg font-semibold text-white">
+              窗宽与窗位：在动态范围中唤醒微观对比度
+            </h3>
+<p class="mt-3 text-xs sm:text-sm">
+              临床 CT 图像的衰减值横跨空气（约 -1000 HU）至致密骨皮质（+1000 HU 以上），远超人眼对灰阶的分辨极限。通过调节<a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://kevalnagda.github.io/ct-windowing" rel="noopener noreferrer" target="_blank">窗宽（Window Width, WW）与窗位（Window Level, WL）</a>，放射科医生得以将显示灰阶聚焦于特定密度区间：收窄窗宽能显著放大软组织或高强化病灶的边缘梯度，而将窗位下移至低密度区间（如<a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://litfl.com/abdominal-ct-windows-advanced/" rel="noopener noreferrer" target="_blank">肺窗中心约 -500 HU</a>），则让含气肺实质中的孤立性结节纤毫毕现。
+            </p>
+</div>
+<div class="mt-5 border-t border-slate-800/80 pt-4">
+<button class="btn-luxe-titanium w-full rounded-xl py-2 text-xs font-medium" id="articleTryCtBtn" type="button">
+              载入「胸部 CT 肺结节」并开启自动筛查 ↑
+            </button>
+</div>
+</div>
+<!-- Chapter II -->
+<div class="studio-subcard flex flex-col justify-between rounded-2xl p-5 sm:p-6">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-mono text-xs font-semibold tracking-widest text-sky-300">CHAPTER 02</span>
+<span class="rounded-md border border-sky-400/20 bg-sky-400/10 px-2 py-0.5 text-[10px] text-sky-200">经典分割算子</span>
+<i aria-hidden="true" class="pal-sticker chapter-pal" data-kind="nai"></i></div>
+<h3 class="font-serif-editorial mt-2.5 text-lg font-semibold text-white">
+              全局类间方差 vs. 局部同质性区域生长
+            </h3>
+<p class="mt-3 text-xs sm:text-sm">
+              面对色素性皮肤病灶等前景与背景呈典型双峰分布的图像，1979 年提出的 <a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://en.wikipedia.org/wiki/Otsu%27s_method" rel="noopener noreferrer" target="_blank">Otsu 最大类间方差法</a>无需先验参数即可从直方图中锁定最优全局分割阈值。但在颅脑 MRI 或胸部 CT 中，颅骨脂肪环与胸壁肋骨往往与靶病灶具有相近的高亮度；此时<a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://3dqlab.stanford.edu/region-growing/" rel="noopener noreferrer" target="_blank">种子区域生长（Seeded Region Growing）</a>与“病灶-周围实质环对比度”连通域筛查便展现出空间拓扑优势——只沿解剖连通邻域扩张，从而精准剥离远端高亮伪影。
+            </p>
+</div>
+<div class="mt-5 border-t border-slate-800/80 pt-4">
+<button class="btn-luxe-titanium w-full rounded-xl py-2 text-xs font-medium" id="articleTryDermBtn" type="button">
+              载入「皮肤镜病灶」体验 Otsu 阈值寻优 ↑
+            </button>
+</div>
+</div>
+<!-- Chapter III -->
+<div class="studio-subcard flex flex-col justify-between rounded-2xl p-5 sm:p-6">
+<div>
+<div class="flex items-center justify-between">
+<span class="font-mono text-xs font-semibold tracking-widest text-emerald-300">CHAPTER 03</span>
+<span class="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] text-emerald-200">定量评价准则</span>
+<i aria-hidden="true" class="pal-sticker chapter-pal" data-kind="fish"></i></div>
+<h3 class="font-serif-editorial mt-2.5 text-lg font-semibold text-white">
+              RECIST 1.1 最大长径与空间重叠度验证
+            </h3>
+<p class="mt-3 text-xs sm:text-sm">
+              在实体瘤疗效随访中，<a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://recist.eortc.org/recist-1-1/" rel="noopener noreferrer" target="_blank">RECIST 1.1 国际指南</a>采用测量平面内的单维最大长径来量化靶病灶负荷（常规螺旋 CT/MRI 可测量非淋巴结靶病灶需满足<a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://radiologyassistant.nl/more/recist-1-1/recist-1-1-1" rel="noopener noreferrer" target="_blank">最长径 ≥ 10 mm</a>）。而在算法基准评测中，研究界普遍以 <a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://veradp-ai.com/iou-vs-dice/" rel="noopener noreferrer" target="_blank">Dice 相似系数（DSC）与 IoU 交并比</a>衡量预测掩膜与专家勾画轮廓的一致性，二者满足确定性代数映射 <code class="rounded bg-slate-900 px-1.5 py-0.5 font-mono text-[11px] text-emerald-300">DSC = 2·IoU / (1 + IoU)</code>（参见 <a class="text-sky-300 underline decoration-sky-500/40 underline-offset-4 hover:text-sky-200" href="https://voxel51.com/glossary/dice-coefficient" rel="noopener noreferrer" target="_blank">Voxel51 技术释义</a>）。
+            </p>
+</div>
+<div class="mt-5 border-t border-slate-800/80 pt-4">
+<button class="btn-luxe-titanium w-full rounded-xl py-2 text-xs font-medium" id="articleTryMriBtn" type="button">
+              载入「脑部增强 MRI」检验高重叠 Dice 分割 ↑
+            </button>
+</div>
+</div>
+</div>
+</div>
+</article><footer class="foot shell"><a href="#top">✿　MedSeg Studio</a><span>医学影像教学与研究</span><a href="#top">回到页首 ↑</a></footer>
+<div aria-hidden="true" id="palTrail"></div><script src="segmentation.js"></script><script src="postcard.js"></script><script src="stickers.js"></script></body>
+</html>
