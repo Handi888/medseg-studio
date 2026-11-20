@@ -637,13 +637,13 @@
             if (state.mask[idx]) {
               const isEdge = !state.mask[idx - 1] || !state.mask[idx + 1] || !state.mask[idx - SIZE] || !state.mask[idx + SIZE];
               if (state.showContour && isEdge) {
-                oData[p4] = 56;
-                oData[p4 + 1] = 189;
-                oData[p4 + 2] = 248;
+                oData[p4] = 255;
+                oData[p4 + 1] = 133;
+                oData[p4 + 2] = 190;
               } else if (alpha > 0) {
-                oData[p4] = oData[p4] * (1 - alpha) + 14 * alpha;
-                oData[p4 + 1] = oData[p4 + 1] * (1 - alpha) + 165 * alpha;
-                oData[p4 + 2] = oData[p4 + 2] * (1 - alpha) + 233 * alpha;
+                oData[p4] = oData[p4] * (1 - alpha) + 255 * alpha;
+                oData[p4 + 1] = oData[p4 + 1] * (1 - alpha) + 92 * alpha;
+                oData[p4 + 2] = oData[p4 + 2] * (1 - alpha) + 164 * alpha;
               }
             }
 
@@ -760,7 +760,7 @@
 
         if (state.mode === 'brush' && state.cursor) {
           medCtx.save();
-          medCtx.strokeStyle = state.brushAction === 'add' ? '#38bdf8' : '#fb7185';
+          medCtx.strokeStyle = state.brushAction === 'add' ? '#ff85be' : '#7dd3fc';
           medCtx.lineWidth = 1.5;
           medCtx.beginPath();
           medCtx.arc(state.cursor.x, state.cursor.y, state.brushRadius, 0, Math.PI * 2);
@@ -770,6 +770,56 @@
       }
 
       // Compute Morphometric & Overlap Metrics
+      // Boundary pixels of a binary mask (4-neighbourhood), subsampled for speed.
+      function maskBoundary(m, cap) {
+        const pts = [];
+        for (let y = 1; y < SIZE - 1; y++) {
+          const row = y * SIZE;
+          for (let x = 1; x < SIZE - 1; x++) {
+            const i = row + x;
+            if (m[i] && (!m[i - 1] || !m[i + 1] || !m[i - SIZE] || !m[i + SIZE])) pts.push(x, y);
+          }
+        }
+        const n = pts.length / 2;
+        if (n <= cap) return pts;
+        const step = n / cap, out = [];
+        for (let k = 0; k < cap; k++) { const j = Math.floor(k * step) * 2; out.push(pts[j], pts[j + 1]); }
+        return out;
+      }
+
+      function directedDistances(a, b) {
+        const d = new Float32Array(a.length / 2);
+        for (let i = 0; i < a.length; i += 2) {
+          let best = Infinity;
+          for (let j = 0; j < b.length; j += 2) {
+            const dx = a[i] - b[j], dy = a[i + 1] - b[j + 1];
+            const v = dx * dx + dy * dy;
+            if (v < best) { best = v; if (v === 0) break; }
+          }
+          d[i / 2] = Math.sqrt(best);
+        }
+        return d;
+      }
+
+      // Symmetric 95th-percentile Hausdorff distance and average symmetric surface distance (mm).
+      function surfaceDistances(pred, ref) {
+        const a = maskBoundary(pred, 1400), b = maskBoundary(ref, 1400);
+        if (!a.length || !b.length) return { hd95: null, assd: null };
+        const all = Array.from(directedDistances(a, b)).concat(Array.from(directedDistances(b, a)));
+        const sum = all.reduce((s, v) => s + v, 0);
+        all.sort((x, y) => x - y);
+        const hd95 = all[Math.min(all.length - 1, Math.floor(0.95 * (all.length - 1)))];
+        return { hd95: hd95 * state.spacingMm, assd: (sum / all.length) * state.spacingMm };
+      }
+
+      function qualityGrade(dice) {
+        if (dice === null || dice === undefined) return { label: '待对比', tone: 'idle' };
+        if (dice >= 0.9) return { label: '优秀 ✿', tone: 'great' };
+        if (dice >= 0.8) return { label: '良好 ♪', tone: 'good' };
+        if (dice >= 0.7) return { label: '一般', tone: 'fair' };
+        return { label: '需修正', tone: 'poor' };
+      }
+
       function computeMetrics() {
         let areaPx = 0;
         let perimPx = 0;
@@ -868,11 +918,18 @@
           recall = (tp + fn) > 0 ? tp / (tp + fn) : 0;
           precision = (tp + fp) > 0 ? tp / (tp + fp) : 0;
         }
+        let hd95 = null, assd = null;
+        if (state.gtMask && areaPx > 0 && !state.isPainting) {
+          ({ hd95, assd } = surfaceDistances(state.mask, state.gtMask));
+        } else if (state.isPainting && state.lastMetrics) {
+          hd95 = state.lastMetrics.hd95; assd = state.lastMetrics.assd;
+        }
+        const recistMeasurable = maxDiamMm >= 10;
 
         state.lastMetrics = {
           areaPx, areaMm2, eqDiamMm, maxDiamMm, perimMm, circ,
           meanG, stdG, cx, cy, minX, maxX, minY, maxY, deltaI,
-          feretP1, feretP2, dice, iou, recall, precision
+          feretP1, feretP2, dice, iou, recall, precision, hd95, assd, recistMeasurable
         };
 
         document.getElementById('restNote').hidden = areaPx > 0;
@@ -915,9 +972,20 @@
           document.getElementById('metricIou').textContent = '无参考标准';
           document.getElementById('barDice').style.width = '0%';
           document.getElementById('barIou').style.width = '0%';
-          document.getElementById('metricRecall').textContent = '点击右上“设为参考掩膜”可对比';
+          document.getElementById('metricRecall').textContent = '--';
           document.getElementById('metricPrecision').textContent = '--';
         }
+        const fmtMm = v => (v === null || v === undefined) ? '--' : `${v.toFixed(2)} mm`;
+        document.getElementById('metricHd95').textContent = fmtMm(hd95);
+        document.getElementById('metricAssd').textContent = fmtMm(assd);
+        const grade = qualityGrade(dice);
+        const gradeEl = document.getElementById('qualityGrade');
+        gradeEl.textContent = grade.label;
+        gradeEl.dataset.tone = grade.tone;
+        const flag = document.getElementById('recistFlag');
+        flag.hidden = areaPx === 0;
+        flag.textContent = recistMeasurable ? '可测量靶病灶 ≥10 mm' : '低于 RECIST 可测量阈值';
+        flag.dataset.ok = String(recistMeasurable);
       }
 
       function updateHistogram() {
@@ -951,7 +1019,7 @@
                 {
                   label: '病灶像素分布',
                   data: normLesion,
-                  backgroundColor: 'rgba(96, 159, 188, 0.8)',
+                  backgroundColor: 'rgba(255, 112, 172, 0.82)',
                   borderRadius: 3,
                   barPercentage: 1.0,
                   categoryPercentage: 0.92
@@ -960,8 +1028,8 @@
                   label: '全图组织分布',
                   data: normWhole,
                   type: 'line',
-                  borderColor: 'rgba(132, 91, 109, 0.88)',
-                  backgroundColor: 'rgba(148, 163, 184, 0.12)',
+                  borderColor: 'rgba(124, 99, 230, 0.9)',
+                  backgroundColor: 'rgba(167, 139, 250, 0.16)',
                   borderWidth: 1.5,
                   pointRadius: 0,
                   fill: true,
@@ -989,14 +1057,14 @@
               },
               scales: {
                 x: {
-                  ticks: { color: '#64748b', font: { size: 9 }, maxTicksLimit: 8 },
+                  ticks: { color: '#9a7b92', font: { size: 9 }, maxTicksLimit: 8 },
                   grid: { display: false }
                 },
                 y: {
                   beginAtZero: true,
                   max: 105,
                   ticks: { display: false },
-                  grid: { color: 'rgba(51, 65, 85, 0.32)' }
+                  grid: { color: 'rgba(236, 72, 153, 0.12)' }
                 }
               }
             }
@@ -1239,6 +1307,7 @@
       medCanvas.addEventListener('pointerup', () => {
         if (state.isPainting) {
           state.isPainting = false;
+          computeMetrics();
           updateHistogram();
         }
         state.draggingSplit = false;
@@ -1591,12 +1660,14 @@
           '       MedSeg Studio 医学影像分割与病灶定量报告',
           '====================================================',
           `检查项目 / 模态：${title}`,
+          `生成时间      ：${new Date().toLocaleString('zh-CN', { hour12: false })}`,
           `分析矩阵与标定：512 × 512 px | 空间分辨率 ${state.spacingMm} mm/px`,
+          `显示窗        ：WW ${state.ww} / WL ${state.wl}${state.invert ? '（反相）' : ''}`,
           `分割识别管线  ：${modeMap[state.mode]}`,
           '----------------------------------------------------',
           '【一、靶病灶形态学定量指标】',
           `  • 病灶截面积 (Area)      : ${(m.areaMm2 || 0).toFixed(2)} mm² (${m.areaPx || 0} px)`,
-          `  • RECIST 1.1 最大长径    : ${(m.maxDiamMm || 0).toFixed(2)} mm`,
+          `  • RECIST 1.1 最大长径    : ${(m.maxDiamMm || 0).toFixed(2)} mm（${m.recistMeasurable ? '可测量靶病灶' : '低于 10 mm 可测量阈值'}）`,
           `  • 等效圆直径             : ${(m.eqDiamMm || 0).toFixed(2)} mm`,
           `  • 病灶边界周长           : ${(m.perimMm || 0).toFixed(2)} mm`,
           `  • 形态圆度 (Circularity) : ${(m.circ || 0).toFixed(3)}`,
@@ -1611,7 +1682,10 @@
             `  • Dice 相似系数 (DSC)    : ${(m.dice * 100).toFixed(2)}% (${m.dice.toFixed(4)})`,
             `  • IoU 交并比 (Jaccard)   : ${(m.iou * 100).toFixed(2)}% (${m.iou.toFixed(4)})`,
             `  • 敏感度 (Recall)        : ${(m.recall * 100).toFixed(2)}%`,
-            `  • 精确率 (Precision)     : ${(m.precision * 100).toFixed(2)}%`
+            `  • 精确率 (Precision)     : ${(m.precision * 100).toFixed(2)}%`,
+            `  • HD95 豪斯多夫距离      : ${m.hd95 == null ? '--' : m.hd95.toFixed(2) + ' mm'}`,
+            `  • ASSD 平均表面距离      : ${m.assd == null ? '--' : m.assd.toFixed(2) + ' mm'}`,
+            `  • 分割质量评级           : ${qualityGrade(m.dice).label}`
           );
         } else {
           lines.push('  • 当前为自定义影像且尚未指定参考金标准掩膜');
@@ -1674,6 +1748,116 @@
         showToast(copied ? '结构化影像报告已复制到剪贴板' : '复制受限，请手动选中复制');
       });
 
+      document.getElementById('downloadReportBtn').addEventListener('click', () => {
+        const blob = new Blob([buildReportText()], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `medseg_report_${state.activeCaseId}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        showToast('报告 TXT 已下载');
+      });
+
+      // ---- Measurement log: snapshot metrics across cases / methods, export as CSV ----
+      const LOG_KEY = 'medseg-measure-log';
+      const modeShort = { region: '区域生长', auto: 'CAD 识别', otsu: 'Otsu 阈值', brush: '画笔精修' };
+      const caseShort = { mri: '脑 MRI', ct: '胸 CT', derm: '皮肤镜', custom: '自定义' };
+      let measureLog = [];
+      try { measureLog = JSON.parse(localStorage.getItem(LOG_KEY) || '[]'); } catch (e) { measureLog = []; }
+      if (!Array.isArray(measureLog)) measureLog = [];
+
+      function saveLog() {
+        try { localStorage.setItem(LOG_KEY, JSON.stringify(measureLog)); } catch (e) { /* storage unavailable */ }
+      }
+
+      function renderLog() {
+        const body = document.getElementById('logTableBody');
+        body.replaceChildren();
+        document.getElementById('logCount').textContent = String(measureLog.length);
+        if (!measureLog.length) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="6" class="log-empty">还没有记录～点「记一笔」把当前结果收进手帐</td>';
+          body.appendChild(tr);
+          return;
+        }
+        measureLog.forEach((r, i) => {
+          const tr = document.createElement('tr');
+          const cells = [
+            `${i + 1}`, `${caseShort[r.caseId] || r.caseId}<small>${modeShort[r.mode] || r.mode}</small>`,
+            `${r.areaMm2.toFixed(1)}`, `${r.maxDiamMm.toFixed(1)}`,
+            r.dice == null ? '--' : r.dice.toFixed(3), r.hd95 == null ? '--' : r.hd95.toFixed(2)
+          ];
+          cells.forEach(html => { const td = document.createElement('td'); td.innerHTML = html; tr.appendChild(td); });
+          body.appendChild(tr);
+        });
+      }
+
+      function logCurrent() {
+        const m = state.lastMetrics;
+        if (!m || !m.areaPx) { showToast('当前还没有轮廓，先分割一个病灶吧'); return; }
+        measureLog.push({
+          time: new Date().toISOString(), caseId: state.activeCaseId, mode: state.mode,
+          spacing: state.spacingMm, areaMm2: m.areaMm2, maxDiamMm: m.maxDiamMm, eqDiamMm: m.eqDiamMm,
+          perimMm: m.perimMm, circ: m.circ, dice: m.dice, iou: m.iou, hd95: m.hd95, assd: m.assd
+        });
+        if (measureLog.length > 50) measureLog.shift();
+        saveLog();
+        renderLog();
+        showToast(`已记进测量手帐 · 第 ${measureLog.length} 条`);
+      }
+
+      document.getElementById('logMeasureBtn').addEventListener('click', logCurrent);
+      document.getElementById('clearLogBtn').addEventListener('click', () => {
+        if (!measureLog.length) return;
+        measureLog = [];
+        saveLog();
+        renderLog();
+        showToast('测量手帐已清空');
+      });
+      document.getElementById('exportCsvBtn').addEventListener('click', () => {
+        if (!measureLog.length) { showToast('手帐是空的，先记一笔再导出'); return; }
+        const head = ['time', 'case', 'method', 'spacing_mm_px', 'area_mm2', 'recist_mm', 'eq_diam_mm', 'perimeter_mm', 'circularity', 'dice', 'iou', 'hd95_mm', 'assd_mm'];
+        const f = (v, d) => v == null ? '' : Number(v).toFixed(d);
+        const rows = measureLog.map(r => [r.time, r.caseId, r.mode, r.spacing, f(r.areaMm2, 2), f(r.maxDiamMm, 2), f(r.eqDiamMm, 2), f(r.perimMm, 2), f(r.circ, 3), f(r.dice, 4), f(r.iou, 4), f(r.hd95, 2), f(r.assd, 2)].join(','));
+        const blob = new Blob(['\ufeff' + [head.join(',')].concat(rows).join('\n')], { type: 'text/csv;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'medseg_measurements.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+        showToast(`已导出 ${measureLog.length} 条测量记录 CSV`);
+      });
+
+      // ---- Keyboard shortcuts ----
+      document.addEventListener('keydown', e => {
+        if (!reportModal.classList.contains('hidden')) return;
+        if (e.target.closest && e.target.closest('input,select,textarea,[contenteditable]')) return;
+        if (e.altKey || e.metaKey) return;
+        const k = e.key.toLowerCase();
+        if (e.ctrlKey) {
+          if (k === 'z') { e.preventDefault(); document.getElementById('undoMaskBtn').click(); }
+          return;
+        }
+        const modes = { '1': 'region', '2': 'auto', '3': 'otsu', '4': 'brush' };
+        if (modes[k]) { document.querySelector(`.algo-mode-btn[data-mode="${modes[k]}"]`).click(); return; }
+        if (k === 'z') document.getElementById('undoMaskBtn').click();
+        else if (k === 'r') openReportModal();
+        else if (k === 'm') logCurrent();
+        else if (k === 'e' && state.mode === 'brush') {
+          document.getElementById(state.brushAction === 'add' ? 'brushEraseBtn' : 'brushAddBtn').click();
+        } else if (k === '[' || k === ']') {
+          const slider = document.getElementById('brushRadiusSlider');
+          slider.value = String(Math.max(2, Math.min(32, state.brushRadius + (k === ']' ? 2 : -2))));
+          slider.dispatchEvent(new Event('input'));
+          renderViewport();
+        }
+      });
+
+      renderLog();
       syncModeUI();
       loadPresetCase('mri');
     })();

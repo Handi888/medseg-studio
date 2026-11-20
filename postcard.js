@@ -17,9 +17,9 @@
     try { localStorage.setItem('medseg-journal-motion',userChoice); } catch {}
   });
   const messages = {
-    chi:['Chiikawa　·　呜哇～这朵小花送给今天的你。','Chiikawa　·　想换一张观察？翻翻下面的样本夹。'],
-    nai:['奶娃　·　肚肚站稳啦，来试试 CT 筛查！','奶娃　·　种子点选好，轮廓就能慢慢长出来啦。'],
-    fish:['蓝色大肥鱼　·　我的小本本，专门记病灶的面积。','蓝色大肥鱼　·　咕噜～翻开报告，今天的测量都在里面。']
+    chi:['Chiikawa　·　呜哇～这朵小花送给今天的你 ✿','Chiikawa　·　想换一张观察？翻翻下面的样本夹吧～','Chiikawa　·　按 1 到 4 可以快速切换分割算法哦！'],
+    nai:['奶娃　·　肚肚站稳啦，来试试 CT 筛查！','奶娃　·　种子点选好，轮廓就能慢慢长出来啦 ♪','奶娃　·　Dice 超过 0.9 就是优秀哦，加油加油！'],
+    fish:['蓝色大肥鱼　·　咕噜～我的小本本专门记病灶的面积。','蓝色大肥鱼　·　按 M 记一笔，最后可以导出 CSV 呀。','蓝色大肥鱼　·　翻开报告，今天的测量都在里面 ♡']
   };
   const counts = {chi:0,nai:0,fish:0};
   for (const button of document.querySelectorAll('[data-pal]')) {
